@@ -1,0 +1,409 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  SUPER_ADMIN
+  HR
+  TEAM_LEAD
+  EMPLOYEE
+  INTERN
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LEAVE
+  WORK_FROM_HOME
+  LATE
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  UNDER_REVIEW
+  COMPLETED
+  REJECTED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum LeaveType {
+  SICK_LEAVE
+  CASUAL_LEAVE
+  EARNED_LEAVE
+  MATERNITY_LEAVE
+  SPECIAL_LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+enum ChatType {
+  DIRECT
+  CHANNEL
+  GROUP
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  firstName       String
+  lastName        String
+  phone           String?
+  role            UserRole  @default(EMPLOYEE)
+  department      Department? @relation(fields: [departmentId], references: [id])
+  departmentId    String?
+  profileImage    String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  attendance      Attendance[]
+  tasks           Task[]
+  subtasks        Subtask[]
+  projects        Project[]
+  teamMembers     TeamMember[]
+  performance     Performance?
+  leaves          Leave[]
+  messages        Message[]
+  chatRooms       ChatRoom[]
+  readReceipts    ReadReceipt[]
+  activityLogs    ActivityLog[]
+
+  @@map("users")
+}
+
+model Department {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  head            String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  users           User[]
+  channels        Channel[]
+
+  @@map("departments")
+}
+
+// ============================================
+// ATTENDANCE
+// ============================================
+
+model Attendance {
+  id              String    @id @default(cuid())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  checkInTime     DateTime?
+  checkOutTime    DateTime?
+  date            DateTime
+  status          AttendanceStatus @default(ABSENT)
+  workingHours    Float?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([userId, date])
+  @@map("attendance")
+}
+
+model Leave {
+  id              String    @id @default(cuid())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  leaveType       LeaveType
+  startDate       DateTime
+  endDate         DateTime
+  reason          String
+  status          LeaveStatus @default(PENDING)
+  approvedBy      String?
+  approvalDate    DateTime?
+  rejectReason    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("leaves")
+}
+
+// ============================================
+// TASK MANAGEMENT
+// ============================================
+
+model Task {
+  id              String    @id @default(cuid())
+  title           String
+  description     String?
+  assignee        User      @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
+  assigneeId      String
+  createdBy       String
+  status          TaskStatus @default(PENDING)
+  priority        TaskPriority @default(MEDIUM)
+  dueDate         DateTime?
+  completedAt     DateTime?
+  attachments     Attachment[]
+  subtasks        Subtask[]
+  projectId       String?
+  estimatedHours  Float?
+  actualHours     Float?
+  qualityRating   Int?       // 1-5 scale
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([assigneeId])
+  @@index([status])
+  @@map("tasks")
+}
+
+model Subtask {
+  id              String    @id @default(cuid())
+  task            Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId          String
+  title           String
+  assignee        User?     @relation(fields: [assigneeId], references: [id])
+  assigneeId      String?
+  status          TaskStatus @default(PENDING)
+  dueDate         DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([taskId])
+  @@map("subtasks")
+}
+
+model Attachment {
+  id              String    @id @default(cuid())
+  task            Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId          String
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  fileType        String?
+  uploadedAt      DateTime  @default(now())
+
+  @@index([taskId])
+  @@map("attachments")
+}
+
+// ============================================
+// PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  status          ProjectStatus @default(PLANNING)
+  startDate       DateTime
+  endDate         DateTime?
+  budget          Float?
+  lead            User      @relation(fields: [leadId], references: [id])
+  leadId          String
+  teamMembers     TeamMember[]
+  milestones      Milestone[]
+  progress        Float?    @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([leadId])
+  @@map("projects")
+}
+
+model TeamMember {
+  id              String    @id @default(cuid())
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  member          User      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId        String
+  role            String?   // e.g., "Developer", "Designer", "QA"
+  joinedAt        DateTime  @default(now())
+
+  @@unique([projectId, memberId])
+  @@map("team_members")
+}
+
+model Milestone {
+  id              String    @id @default(cuid())
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  name            String
+  description     String?
+  dueDate         DateTime
+  status          MilestoneStatus @default(NOT_STARTED)
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([projectId])
+  @@map("milestones")
+}
+
+// ============================================
+// PERFORMANCE SYSTEM
+// ============================================
+
+model Performance {
+  id              String    @id @default(cuid())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String    @unique
+  attendanceScore Float     @default(0) // 0-30
+  taskScore       Float     @default(0) // 0-40
+  deadlineScore   Float     @default(0) // 0-20
+  qualityScore    Float     @default(0) // 0-10
+  totalScore      Float     @default(0) // 0-100
+  rank            Int?
+  lastUpdated     DateTime  @updatedAt
+  month           Int       // 1-12
+  year            Int
+  createdAt       DateTime  @default(now())
+
+  @@unique([userId, month, year])
+  @@map("performances")
+}
+
+// ============================================
+// COMMUNICATION
+// ============================================
+
+model ChatRoom {
+  id              String    @id @default(cuid())
+  name            String?
+  type            ChatType  @default(DIRECT)
+  createdBy       User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById     String
+  members         String[]  // JSON array of user IDs
+  channel         Channel?  @relation(fields: [channelId], references: [id])
+  channelId       String?
+  messages        Message[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([createdById])
+  @@map("chat_rooms")
+}
+
+model Channel {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  department      Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  departmentId    String
+  isPrivate       Boolean   @default(false)
+  chatRooms       ChatRoom[]
+  announcements   Announcement[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([name, departmentId])
+  @@index([departmentId])
+  @@map("channels")
+}
+
+model Message {
+  id              String    @id @default(cuid())
+  chatRoom        ChatRoom  @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  chatRoomId      String
+  sender          User      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId        String
+  content         String
+  attachmentUrl   String?
+  readBy          ReadReceipt[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([chatRoomId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model ReadReceipt {
+  id              String    @id @default(cuid())
+  message         Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId       String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  readAt          DateTime  @default(now())
+
+  @@unique([messageId, userId])
+  @@map("read_receipts")
+}
+
+model Announcement {
+  id              String    @id @default(cuid())
+  title           String
+  content         String
+  channel         Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId       String
+  priority        String?   // HIGH, MEDIUM, LOW
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([channelId])
+  @@map("announcements")
+}
+
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
+model ActivityLog {
+  id              String    @id @default(cuid())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          String
+  action          String    // e.g., "LOGIN", "CREATE_TASK", "UPDATE_PROFILE"
+  resource        String?   // e.g., "Task:123", "Project:456"
+  description     String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime  @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
