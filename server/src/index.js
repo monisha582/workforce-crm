@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import 'express-async-errors';
 import dotenv from 'dotenv';
 import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { Server as SocketIOServer } from 'socket.io';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -143,6 +146,26 @@ app.use('/api/leaves', leaveRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reports', reportsRoutes);
+
+// Serve the built frontend if it exists
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendDist = path.join(__dirname, '../client/dist');
+
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({
+        success: false,
+        message: 'API route not found',
+        path: req.originalUrl,
+      });
+    }
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
 
 // ============================================
 // SOCKET.IO EVENTS
