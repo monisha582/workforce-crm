@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
+import prisma from '../config/prisma.js';
 import { AppError } from './errorHandler.js';
 
-export const protect = (req, res, next) => {
+export const protect = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
 
@@ -10,7 +11,21 @@ export const protect = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+
+    const user = await prisma.user.findUnique({
+      where: { email: decoded.email },
+    });
+
+    if (!user) {
+      throw new AppError('User account no longer exists', 401);
+    }
+
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
     next();
   } catch (error) {
     next(error);

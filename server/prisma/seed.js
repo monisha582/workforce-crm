@@ -6,65 +6,45 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Clear existing data
-  await prisma.activityLog.deleteMany();
-  await prisma.readReceipt.deleteMany();
-  await prisma.message.deleteMany();
-  await prisma.announcement.deleteMany();
-  await prisma.channel.deleteMany();
-  await prisma.performance.deleteMany();
-  await prisma.leave.deleteMany();
-  await prisma.attendance.deleteMany();
-  await prisma.attachment.deleteMany();
-  await prisma.subtask.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.milestone.deleteMany();
-  await prisma.teamMember.deleteMany();
-  await prisma.project.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.department.deleteMany();
+  const departmentDefinitions = [
+    { name: 'Engineering', description: 'Software development team', head: 'John Smith' },
+    { name: 'HR', description: 'Human Resources', head: 'Sarah Johnson' },
+    { name: 'Operations', description: 'Operations & Logistics', head: 'Mike Brown' },
+    { name: 'Sales', description: 'Sales & Business Development', head: 'Emma Wilson' },
+  ];
 
-  console.log('🗑️ Cleared existing data');
+  const departments = await Promise.all(
+    departmentDefinitions.map((department) =>
+      prisma.department.upsert({
+        where: { name: department.name },
+        update: {
+          description: department.description,
+          head: department.head,
+        },
+        create: {
+          name: department.name,
+          description: department.description,
+          head: department.head,
+        },
+      })
+    )
+  );
 
-  // Create departments
-  const departments = await Promise.all([
-    prisma.department.create({
-      data: {
-        name: 'Engineering',
-        description: 'Software development team',
-        head: 'John Smith',
-      },
-    }),
-    prisma.department.create({
-      data: {
-        name: 'HR',
-        description: 'Human Resources',
-        head: 'Sarah Johnson',
-      },
-    }),
-    prisma.department.create({
-      data: {
-        name: 'Operations',
-        description: 'Operations & Logistics',
-        head: 'Mike Brown',
-      },
-    }),
-    prisma.department.create({
-      data: {
-        name: 'Sales',
-        description: 'Sales & Business Development',
-        head: 'Emma Wilson',
-      },
-    }),
-  ]);
+  console.log('✅ Ensured departments exist');
 
-  console.log('✅ Created 4 departments');
-
-  // Create users
   const hashedPassword = await bcrypt.hash('Password123!', 10);
 
-  const superAdmin = await prisma.user.create({
-    data: {
+  const superAdmin = await prisma.user.upsert({
+    where: { email: 'admin@workforce.com' },
+    update: {
+      password: hashedPassword,
+      firstName: 'Admin',
+      lastName: 'User',
+      role: 'SUPER_ADMIN',
+      departmentId: departments[0].id,
+      isActive: true,
+    },
+    create: {
       email: 'admin@workforce.com',
       password: hashedPassword,
       firstName: 'Admin',
@@ -75,8 +55,17 @@ async function main() {
     },
   });
 
-  const hr = await prisma.user.create({
-    data: {
+  const hr = await prisma.user.upsert({
+    where: { email: 'hr@workforce.com' },
+    update: {
+      password: hashedPassword,
+      firstName: 'HR',
+      lastName: 'Manager',
+      role: 'HR',
+      departmentId: departments[1].id,
+      isActive: true,
+    },
+    create: {
       email: 'hr@workforce.com',
       password: hashedPassword,
       firstName: 'HR',
@@ -87,8 +76,17 @@ async function main() {
     },
   });
 
-  const teamLead = await prisma.user.create({
-    data: {
+  const teamLead = await prisma.user.upsert({
+    where: { email: 'lead@workforce.com' },
+    update: {
+      password: hashedPassword,
+      firstName: 'Team',
+      lastName: 'Lead',
+      role: 'TEAM_LEAD',
+      departmentId: departments[0].id,
+      isActive: true,
+    },
+    create: {
       email: 'lead@workforce.com',
       password: hashedPassword,
       firstName: 'Team',
