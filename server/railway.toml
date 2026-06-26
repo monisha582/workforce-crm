@@ -2,5 +2,3 @@
 builder = "nixpacks"
 buildCommand = "npm install && npx prisma generate"
 
-[start]
-cmd = "npx prisma migrate deploy && node src/index.js"

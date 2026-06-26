@@ -263,11 +263,35 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📖 API docs available at http://localhost:${PORT}/api/docs`);
-  console.log(`🔧 Environment: ${NODE_ENV}`);
-});
+// Import for running migrations
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+// Run migrations and start server
+(async () => {
+  try {
+    // Apply Prisma migrations
+    console.log('📦 Applying Prisma migrations...');
+    const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
+    console.log('✅ Migrations applied successfully');
+    if (stdout) console.log(stdout);
+  } catch (error) {
+    if (error.code === 0) {
+      console.log('✅ Migrations applied successfully');
+    } else {
+      console.error('⚠️ Migration error (continuing startup):', error.message);
+    }
+  }
+
+  // Start server
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📖 API docs available at http://localhost:${PORT}/api/docs`);
+    console.log(`🔧 Environment: ${NODE_ENV}`);
+  });
+})();
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {
