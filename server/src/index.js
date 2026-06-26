@@ -34,10 +34,32 @@ import { requestLogger } from './middleware/requestLogger.js';
 const app = express();
 const server = http.createServer(app);
 
+// Get allowed origins for CORS
+const getAllowedOrigins = () => {
+  const allowed = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+  
+  // Add FRONTEND_URL if set
+  if (process.env.FRONTEND_URL) {
+    allowed.push(process.env.FRONTEND_URL);
+  }
+  
+  return allowed;
+};
+
 // Socket.IO Setup
 const io = new SocketIOServer(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      const allowedOrigins = getAllowedOrigins();
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   },
 });
@@ -94,7 +116,14 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // Security
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 
@@ -150,7 +179,7 @@ app.use('/api/reports', reportsRoutes);
 // Serve the built frontend if it exists
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const frontendDist = path.join(__dirname, '../client/dist');
+const frontendDist = path.join(__dirname, '..', '..', 'client', 'dist');
 
 if (fs.existsSync(frontendDist)) {
   app.use(express.static(frontendDist));
