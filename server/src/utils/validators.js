@@ -64,10 +64,10 @@ export const createTaskSchema = Joi.object({
     }),
   description: Joi.string()
     .max(2000)
-    .required()
+    .allow('')
+    .optional()
     .messages({
       'string.max': 'Description cannot exceed 2000 characters',
-      'any.required': 'Description is required',
     }),
   assigneeId: Joi.string()
     .required()
@@ -77,15 +77,16 @@ export const createTaskSchema = Joi.object({
   priority: Joi.string()
     .valid('LOW', 'MEDIUM', 'HIGH')
     .default('MEDIUM')
+    .optional()
     .messages({
       'any.only': 'Priority must be LOW, MEDIUM, or HIGH',
     }),
   dueDate: Joi.date()
     .min('now')
-    .required()
+    .optional()
+    .allow(null)
     .messages({
       'date.min': 'Due date must be in the future',
-      'any.required': 'Due date is required',
     }),
 });
 
