@@ -14,6 +14,11 @@ import swaggerJsdoc from 'swagger-jsdoc';
 // Load environment variables
 dotenv.config();
 
+// Aliases for Railway environment names
+if (process.env.JWS_SECRETKEY && !process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = process.env.JWS_SECRETKEY;
+}
+
 // Import routes
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
