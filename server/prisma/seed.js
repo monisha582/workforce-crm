@@ -38,8 +38,8 @@ async function main() {
     where: { email: 'admin@workforce.com' },
     update: {
       password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
+      firstName: 'Monisha',
+      lastName: 'Sharma',
       role: 'SUPER_ADMIN',
       departmentId: departments[0].id,
       isActive: true,
@@ -47,8 +47,8 @@ async function main() {
     create: {
       email: 'admin@workforce.com',
       password: hashedPassword,
-      firstName: 'Admin',
-      lastName: 'User',
+      firstName: 'Monisha',
+      lastName: 'Sharma',
       role: 'SUPER_ADMIN',
       departmentId: departments[0].id,
       isActive: true,
@@ -59,8 +59,8 @@ async function main() {
     where: { email: 'hr@workforce.com' },
     update: {
       password: hashedPassword,
-      firstName: 'HR',
-      lastName: 'Manager',
+      firstName: 'Meghana',
+      lastName: 'Rao',
       role: 'HR',
       departmentId: departments[1].id,
       isActive: true,
@@ -68,8 +68,8 @@ async function main() {
     create: {
       email: 'hr@workforce.com',
       password: hashedPassword,
-      firstName: 'HR',
-      lastName: 'Manager',
+      firstName: 'Meghana',
+      lastName: 'Rao',
       role: 'HR',
       departmentId: departments[1].id,
       isActive: true,
@@ -80,8 +80,8 @@ async function main() {
     where: { email: 'lead@workforce.com' },
     update: {
       password: hashedPassword,
-      firstName: 'Team',
-      lastName: 'Lead',
+      firstName: 'Mahesh',
+      lastName: 'Kumar',
       role: 'TEAM_LEAD',
       departmentId: departments[0].id,
       isActive: true,
@@ -89,8 +89,8 @@ async function main() {
     create: {
       email: 'lead@workforce.com',
       password: hashedPassword,
-      firstName: 'Team',
-      lastName: 'Lead',
+      firstName: 'Mahesh',
+      lastName: 'Kumar',
       role: 'TEAM_LEAD',
       departmentId: departments[0].id,
       isActive: true,
@@ -98,45 +98,81 @@ async function main() {
   });
 
   const employees = await Promise.all([
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'emp1@workforce.com' },
+      update: {
+        password: hashedPassword,
+        firstName: 'Priyushna',
+        lastName: 'Nair',
+        role: 'EMPLOYEE',
+        departmentId: departments[0].id,
+        isActive: true,
+      },
+      create: {
         email: 'emp1@workforce.com',
         password: hashedPassword,
-        firstName: 'Alice',
-        lastName: 'Smith',
+        firstName: 'Priyushna',
+        lastName: 'Nair',
         role: 'EMPLOYEE',
         departmentId: departments[0].id,
         isActive: true,
       },
     }),
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'emp2@workforce.com' },
+      update: {
+        password: hashedPassword,
+        firstName: 'Suvarna',
+        lastName: 'Menon',
+        role: 'EMPLOYEE',
+        departmentId: departments[0].id,
+        isActive: true,
+      },
+      create: {
         email: 'emp2@workforce.com',
         password: hashedPassword,
-        firstName: 'Bob',
-        lastName: 'Johnson',
+        firstName: 'Suvarna',
+        lastName: 'Menon',
         role: 'EMPLOYEE',
         departmentId: departments[0].id,
         isActive: true,
       },
     }),
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'emp3@workforce.com' },
+      update: {
+        password: hashedPassword,
+        firstName: 'Manasvin',
+        lastName: 'Reddy',
+        role: 'EMPLOYEE',
+        departmentId: departments[2].id,
+        isActive: true,
+      },
+      create: {
         email: 'emp3@workforce.com',
         password: hashedPassword,
-        firstName: 'Charlie',
-        lastName: 'Brown',
+        firstName: 'Manasvin',
+        lastName: 'Reddy',
         role: 'EMPLOYEE',
         departmentId: departments[2].id,
         isActive: true,
       },
     }),
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'emp4@workforce.com' },
+      update: {
+        password: hashedPassword,
+        firstName: 'Riya',
+        lastName: 'Iyer',
+        role: 'EMPLOYEE',
+        departmentId: departments[3].id,
+        isActive: true,
+      },
+      create: {
         email: 'emp4@workforce.com',
         password: hashedPassword,
-        firstName: 'Diana',
-        lastName: 'Davis',
+        firstName: 'Riya',
+        lastName: 'Iyer',
         role: 'EMPLOYEE',
         departmentId: departments[3].id,
         isActive: true,
@@ -144,12 +180,21 @@ async function main() {
     }),
   ]);
 
-  const intern = await prisma.user.create({
-    data: {
+  const intern = await prisma.user.upsert({
+    where: { email: 'intern@workforce.com' },
+    update: {
+      password: hashedPassword,
+      firstName: 'Ananya',
+      lastName: 'Joshi',
+      role: 'INTERN',
+      departmentId: departments[0].id,
+      isActive: true,
+    },
+    create: {
       email: 'intern@workforce.com',
       password: hashedPassword,
-      firstName: 'Eve',
-      lastName: 'Wilson',
+      firstName: 'Ananya',
+      lastName: 'Joshi',
       role: 'INTERN',
       departmentId: departments[0].id,
       isActive: true,
