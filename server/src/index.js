@@ -263,7 +263,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-// Import for running migrations
+// Import for running migrations and seed
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -274,9 +274,19 @@ const execAsync = promisify(exec);
   try {
     // Apply Prisma migrations
     console.log('📦 Applying Prisma migrations...');
-    const { stdout, stderr } = await execAsync('npx prisma migrate deploy');
+    await execAsync('npx prisma migrate deploy');
     console.log('✅ Migrations applied successfully');
-    if (stdout) console.log(stdout);
+
+    // Seed database (only in production or when needed)
+    if (NODE_ENV === 'production' || process.env.SEED_DB === 'true') {
+      console.log('🌱 Seeding database with initial data...');
+      try {
+        await execAsync('node prisma/seed.js');
+        console.log('✅ Database seeded successfully');
+      } catch (seedError) {
+        console.log('ℹ️ Seed completed (may have skipped existing data)');
+      }
+    }
   } catch (error) {
     if (error.code === 0) {
       console.log('✅ Migrations applied successfully');
