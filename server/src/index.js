@@ -39,6 +39,7 @@ const getAllowedOrigins = () => {
   const allowed = [
     'http://localhost:5173',
     'http://localhost:3000',
+    'https://divine-nurturing-production-7687.up.railway.app',
   ];
   
   // Add FRONTEND_URL if set
@@ -46,7 +47,7 @@ const getAllowedOrigins = () => {
     allowed.push(process.env.FRONTEND_URL);
   }
   
-  return allowed;
+  return Array.from(new Set(allowed));
 };
 
 // Socket.IO Setup
