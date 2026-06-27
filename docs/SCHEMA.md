@@ -1,727 +1,699 @@
-﻿# Database Audit and Corrected Schema
+﻿# Workforce CRM Database Schema Documentation
+
+This document describes the actual database schema and the application data flow implemented in this project. It is based on the server-side Prisma schema, Express route and controller implementation, frontend API calls, and visible UI pages.
+
+## 1. Overview
+
+The database is managed by Prisma and uses PostgreSQL as its persistence layer. The core domain is employee workforce management, centered on:
+
+- Authentication and user roles
+- Attendance and leave requests
+- Task management with subtasks and attachments
+- Project management with milestones and team membership
+- Performance scoring and leaderboard data
+- Communication channels, chat rooms, and announcements
+- Activity logging for basic event audit
 
-This document reflects the database structure that is actually implemented in the current project. I reviewed the frontend screens, the React routes, the backend controllers and routes, the Prisma schema, the migrations, and the seed data before writing this version.
+Data access is handled through REST endpoints under `/api`, and frontend pages use Axios to call these routes. JWT authentication protects API access, and role-based authorization restricts administrative actions.
 
-The current application is a workforce management system with authentication, user management, attendance tracking, task management, projects, performance reporting, and internal communication. It does not currently include volunteer management, event registration, or application approval workflows as part of the shipped UI or backend flow.
+## 2. Database architecture and key tables
 
-## What I verified
+The Prisma schema uses the following tables and related enums:
+
+- `users`
+- `departments`
+- `attendance`
+- `leaves`
+- `tasks`
+- `subtasks`
+- `attachments`
+- `projects`
+- `team_members`
+- `milestones`
+- `performances`
+- `chat_rooms`
+- `channels`
+- `messages`
+- `read_receipts`
+- `announcements`
+- `activity_logs`
 
-The audit was based on the real implementation in:
+### 2.1 Enums
 
-- Frontend pages in the client app, especially the screens under the pages folder
-- Navigation and route setup in the app shell
-- Backend routes and controller logic in the server app
-- Prisma models and the SQL migration file
-- Seed data used to initialize the database
+The backend defines these enums:
 
-## Frontend-to-backend comparison
+- `UserRole`: `SUPER_ADMIN`, `HR`, `TEAM_LEAD`, `EMPLOYEE`, `INTERN`
+- `AttendanceStatus`: `PRESENT`, `ABSENT`, `LEAVE`, `WORK_FROM_HOME`, `LATE`
+- `TaskStatus`: `PENDING`, `IN_PROGRESS`, `UNDER_REVIEW`, `COMPLETED`, `REJECTED`
+- `TaskPriority`: `LOW`, `MEDIUM`, `HIGH`, `URGENT`
+- `LeaveType`: `SICK_LEAVE`, `CASUAL_LEAVE`, `EARNED_LEAVE`, `MATERNITY_LEAVE`, `SPECIAL_LEAVE`
+- `LeaveStatus`: `PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`
+- `ProjectStatus`: `PLANNING`, `IN_PROGRESS`, `ON_HOLD`, `COMPLETED`, `CANCELLED`
+- `MilestoneStatus`: `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `DELAYED`
+- `ChatType`: `DIRECT`, `CHANNEL`, `GROUP`
+
+## 3. Tables and fields
 
-| Frontend screen | What the UI actually does | Backend support that exists |
-|---|---|---|
-| Login and Register | Auth forms for sign-in and account creation | Auth endpoints and user creation logic |
-| Dashboard | Static dashboard view with placeholder content | Dashboard statistics endpoints |
-| Tasks | Create tasks with title, description, and assignee | Task CRUD plus task status updates and subtask support |
-| Projects | Project cards and progress display | Project CRUD, milestones, team membership |
-| Attendance | Check in and check out with history and summary | Attendance check-in/check-out and leave-related API |
-| Performance | Performance overview screen | Performance metrics and leaderboard endpoints |
-| Teams | Static team overview screen | Team data is modeled through projects and users, but not fully surfaced in the UI |
-| Chat | Channel-based communication UI | Channel and announcement APIs, plus backend chat room support |
-| Admin | Static admin overview screen | User role and activity log APIs |
+### 3.1 `users`
 
-## Audit findings and mismatches
+Purpose: store registered accounts and role metadata.
 
-The main mismatches between the earlier schema and the real application are below.
+Columns:
 
-### 1. Leave management
+- `id` (`String`, PK, `@default(cuid())`)
+- `email` (`String`, unique)
+- `password` (`String`)
+- `firstName` (`String`)
+- `lastName` (`String`)
+- `phone` (`String?`)
+- `role` (`UserRole`, default `EMPLOYEE`)
+- `departmentId` (`String?`)
+- `profileImage` (`String?`)
+- `isActive` (`Boolean`, default `true`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
 
-- The frontend has no leave page and no leave entry in the sidebar navigation.
-- The backend does contain leave-related routes and controller logic, so the leave table is not completely unused.
-- For the current UI-driven application, leave is best treated as a backend-only feature rather than a core visible module.
+Foreign keys:
 
-### 2. Tasks
+- `departmentId` → `departments.id`
+
+Relationships:
+
+- One `User` may have many `Attendance` records.
+- One `User` may have many `Task` assignments as `assignee`.
+- One `User` may have many `Subtask` assignments.
+- One `User` may lead many `Project` records.
+- One `User` may have many `TeamMember` memberships.
+- One `User` may have a single `Performance` record per month/year.
+- One `User` may have many `Leave` requests.
+- One `User` may send many `Message` records.
+- One `User` may create many `ChatRoom` records.
+- One `User` may have many `ReadReceipt` records.
+- One `User` may have many `ActivityLog` entries.
 
-- The current UI only creates tasks with title, description, and assignee.
-- The backend also supports subtasks and attachments, but the visible UI does not use those features.
-- Because those tables are still present in the controller logic and routes, they remain part of the implemented backend model.
+### 3.2 `departments`
 
-### 3. Communication
+Purpose: store department references for users and channels.
 
-- The frontend uses channels and announcements rather than a full chat-room experience.
-- The backend still supports chat rooms, messages, and read receipts, so those tables remain in the implementation.
-- They are not the main UI flow, but they are implemented server-side.
+Columns:
 
-### 4. User profile fields
+- `id` (`String`, PK, `@default(cuid())`)
+- `name` (`String`, unique)
+- `description` (`String?`)
+- `head` (`String?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
 
-- The registration form only collects first name, last name, email, and password.
-- The backend supports additional fields such as phone, profile image, department selection, and active status, but the current UI does not expose them during registration or profile editing.
-- These fields remain in the schema because the backend and API support them.
+Relationships:
 
-### 5. Departments
+- One `Department` can have many `User` records.
+- One `Department` can have many `Channel` records.
 
-- The UI shows departments in the admin screen, but there is no form or workflow to create, edit, or delete departments.
-- The department table is still used by users and channels, so it is part of the current data model.
+### 3.3 `attendance`
 
-### 6. Attendance fields
+Purpose: track daily employee attendance and check-in/out.
 
-- The UI shows attendance status and check-in/check-out times, but it does not display working hours or notes.
-- Working hours are still calculated and stored in the backend during checkout.
-- Notes are not used anywhere in the application and are not kept in the corrected schema.
+Columns:
 
-### 7. createdAt and updatedAt
+- `id` (`String`, PK, `@default(cuid())`)
+- `userId` (`String`, FK)
+- `checkInTime` (`DateTime?`)
+- `checkOutTime` (`DateTime?`)
+- `date` (`DateTime`)
+- `status` (`AttendanceStatus`, default `ABSENT`)
+- `workingHours` (`Float?`)
+- `notes` (`String?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
 
-- These fields are used for backend ordering, history, and auditing.
-- They are not shown in the frontend, but they are still meaningful metadata fields and are kept on the tables where the backend relies on them.
+Constraints:
 
-### 8. Volunteer, event, and application workflows
+- Unique composite index on `(userId, date)`.
 
-- There is no volunteer registration flow, no event registration flow, and no application approval workflow in the current codebase.
-- The earlier statement that these areas are not represented in the schema remains correct.
+Relationships:
 
-## A. Mismatches found
+- One `Attendance` record belongs to one `User`.
 
-1. The earlier schema treated leave as a core visible feature, but the current UI does not expose it.
-2. The earlier schema described subtasks and attachments as a major task workflow, but the UI only uses the basic task form.
-3. The earlier schema described chat rooms and read receipts as a central feature, while the current UI is centered on channels and announcements.
-4. The earlier schema implied a fully editable department management module, but the current project does not implement that workflow.
-5. The earlier schema included attendance notes and other fields that are not used by the current application logic.
-6. The earlier schema implied a stronger volunteer/event/application model than the code actually contains.
+### 3.4 `leaves`
 
-## B. Unused database tables
+Purpose: store leave request data and approval status.
 
-No table is completely unused in the current codebase.
+Columns:
 
-The closest cases are:
-
-- Leave is backend-only and not surfaced in the UI.
-- Chat rooms and read receipts are implemented in the backend but are not part of the primary UI experience.
-
-## C. Unused columns
-
-These columns are not used by the current application logic and are removed from the corrected schema:
-
-- attendance.notes
-- performance.rank
-
-## D. Missing columns that should exist
-
-No essential database columns are missing for the current implementation.
-
-The application already has the core columns needed for:
-
-- authentication and user roles
-- attendance handling
-- task assignment
-- project tracking
-- performance scoring
-- channels and announcements
-
-## Corrected database schema
-
-The schema below matches the implementation that currently exists in the project.
-
-### Users
-
-- Purpose: Stores the account details for every person who can log in and use the application.
-- Primary key: id
-- Important columns:
-  - id: String
-  - email: String, unique
-  - password: String
-  - firstName: String
-  - lastName: String
-  - phone: String, optional
-  - role: Enum, one of SUPER_ADMIN, HR, TEAM_LEAD, EMPLOYEE, INTERN
-  - departmentId: String, optional
-  - profileImage: String, optional
-  - isActive: Boolean, default true
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - departmentId -> departments.id
-- Relationships:
-  - One department can have many users.
-  - One user can have many attendance records, tasks, leaves, projects through team membership, performance records, messages, and activity logs.
-
-### Departments
-
-- Purpose: Stores the organization’s departments.
-- Primary key: id
-- Important columns:
-  - id: String
-  - name: String, unique
-  - description: String, optional
-  - head: String, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys: None
-- Relationships:
-  - One department can have many users.
-  - One department can have many channels.
-
-### Attendance
-
-- Purpose: Tracks daily attendance for each user.
-- Primary key: id
-- Important columns:
-  - id: String
-  - userId: String
-  - checkInTime: DateTime, optional
-  - checkOutTime: DateTime, optional
-  - date: DateTime
-  - status: Enum
-  - workingHours: Float, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - userId -> users.id
-- Relationships:
-  - One user can have many attendance rows.
-  - The schema enforces one attendance row per user per date.
-
-### Leaves
-
-- Purpose: Stores leave requests submitted by users.
-- Primary key: id
-- Important columns:
-  - id: String
-  - userId: String
-  - leaveType: Enum
-  - startDate: DateTime
-  - endDate: DateTime
-  - reason: String
-  - status: Enum
-  - approvedBy: String, optional
-  - approvalDate: DateTime, optional
-  - rejectReason: String, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - userId -> users.id
-- Relationships:
-  - One user can submit many leave requests.
-
-### Tasks
-
-- Purpose: Stores work items assigned to employees.
-- Primary key: id
-- Important columns:
-  - id: String
-  - title: String
-  - description: String, optional
-  - assigneeId: String
-  - createdBy: String
-  - status: Enum
-  - priority: Enum
-  - dueDate: DateTime, optional
-  - completedAt: DateTime, optional
-  - projectId: String, optional
-  - estimatedHours: Float, optional
-  - actualHours: Float, optional
-  - qualityRating: Int, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - assigneeId -> users.id
-- Relationships:
-  - One user can be assigned many tasks.
-  - One task can have many subtasks and attachments.
-  - A task can optionally belong to a project.
-
-### Subtasks
-
-- Purpose: Breaks a task into smaller pieces.
-- Primary key: id
-- Important columns:
-  - id: String
-  - taskId: String
-  - title: String
-  - assigneeId: String, optional
-  - status: Enum
-  - dueDate: DateTime, optional
-  - completedAt: DateTime, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - taskId -> tasks.id
-  - assigneeId -> users.id
-- Relationships:
-  - One task can have many subtasks.
-
-### Attachments
-
-- Purpose: Stores files attached to a task.
-- Primary key: id
-- Important columns:
-  - id: String
-  - taskId: String
-  - fileName: String
-  - fileUrl: String
-  - fileSize: Int, optional
-  - fileType: String, optional
-  - uploadedAt: DateTime
-- Foreign keys:
-  - taskId -> tasks.id
-- Relationships:
-  - One task can have many attachments.
-
-### Projects
-
-- Purpose: Stores larger initiatives that are assigned to a lead and a set of team members.
-- Primary key: id
-- Important columns:
-  - id: String
-  - name: String
-  - description: String, optional
-  - status: Enum
-  - startDate: DateTime
-  - endDate: DateTime, optional
-  - budget: Float, optional
-  - leadId: String
-  - progress: Float, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - leadId -> users.id
-- Relationships:
-  - One user can lead many projects.
-  - One project can have many team members and milestones.
-
-### Team Members
-
-- Purpose: Connects users to projects.
-- Primary key: id
-- Important columns:
-  - id: String
-  - projectId: String
-  - memberId: String
-  - role: String, optional
-  - joinedAt: DateTime
-- Foreign keys:
-  - projectId -> projects.id
-  - memberId -> users.id
-- Relationships:
-  - This is the many-to-many bridge between users and projects.
-
-### Milestones
-
-- Purpose: Stores project checkpoints.
-- Primary key: id
-- Important columns:
-  - id: String
-  - projectId: String
-  - name: String
-  - description: String, optional
-  - dueDate: DateTime
-  - status: Enum
-  - completedAt: DateTime, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - projectId -> projects.id
-- Relationships:
-  - One project can have many milestones.
-
-### Performance
-
-- Purpose: Stores calculated performance scores for a user.
-- Primary key: id
-- Important columns:
-  - id: String
-  - userId: String, unique
-  - attendanceScore: Float
-  - taskScore: Float
-  - deadlineScore: Float
-  - qualityScore: Float
-  - totalScore: Float
-  - month: Int
-  - year: Int
-  - lastUpdated: DateTime
-  - createdAt: DateTime
-- Foreign keys:
-  - userId -> users.id
-- Relationships:
-  - One user has one performance record for a given month and year.
-
-### Channels
-
-- Purpose: Stores communication channels linked to departments.
-- Primary key: id
-- Important columns:
-  - id: String
-  - name: String
-  - description: String, optional
-  - departmentId: String
-  - isPrivate: Boolean, default false
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - departmentId -> departments.id
-- Relationships:
-  - One department can have many channels.
-  - One channel can have many announcements and chat rooms.
-
-### Chat Rooms
-
-- Purpose: Stores chat threads for conversations.
-- Primary key: id
-- Important columns:
-  - id: String
-  - name: String, optional
-  - type: Enum
-  - createdById: String
-  - members: String array
-  - channelId: String, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - createdById -> users.id
-  - channelId -> channels.id
-- Relationships:
-  - One user can create many chat rooms.
-  - One chat room can have many messages.
-
-### Messages
-
-- Purpose: Stores content inside a chat room.
-- Primary key: id
-- Important columns:
-  - id: String
-  - chatRoomId: String
-  - senderId: String
-  - content: String
-  - attachmentUrl: String, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - chatRoomId -> chat_rooms.id
-  - senderId -> users.id
-- Relationships:
-  - One chat room can have many messages.
-
-### Announcements
-
-- Purpose: Stores departmental announcements posted to channels.
-- Primary key: id
-- Important columns:
-  - id: String
-  - title: String
-  - content: String
-  - channelId: String
-  - priority: String, optional
-  - expiresAt: DateTime, optional
-  - createdAt: DateTime
-  - updatedAt: DateTime
-- Foreign keys:
-  - channelId -> channels.id
-- Relationships:
-  - One channel can have many announcements.
-
-### Read Receipts
-
-- Purpose: Tracks which users have read a message.
-- Primary key: id
-- Important columns:
-  - id: String
-  - messageId: String
-  - userId: String
-  - readAt: DateTime
-- Foreign keys:
-  - messageId -> messages.id
-  - userId -> users.id
-- Relationships:
-  - One message can have many read receipts.
-
-### Activity Logs
-
-- Purpose: Records user actions and system events for auditing.
-- Primary key: id
-- Important columns:
-  - id: String
-  - userId: String
-  - action: String
-  - resource: String, optional
-  - description: String, optional
-  - ipAddress: String, optional
-  - userAgent: String, optional
-  - createdAt: DateTime
-- Foreign keys:
-  - userId -> users.id
-- Relationships:
-  - One user can have many activity log entries.
-
-## Relationship summary
-
-The current schema uses three main relationship patterns:
-
-- One-to-many:
-  - Departments to Users
-  - Departments to Channels
-  - Users to Attendance
-  - Users to Leaves
-  - Users to Tasks
-  - Tasks to Subtasks
-  - Tasks to Attachments
-  - Projects to Team Members
-  - Projects to Milestones
-  - Channels to Announcements
-  - Chat Rooms to Messages
-  - Messages to Read Receipts
-  - Users to Activity Logs
-- One-to-one:
-  - Users to Performance records
-- Many-to-many:
-  - Users and Projects are joined through team_members
-
-## Updated ER diagram
-
-```mermaid
-er diagram
-  User ||--o{ Attendance : has
-  User ||--o{ Leave : submits
-  User ||--o{ Task : assigned
-  User ||--o{ Subtask : assigned
-  User ||--o{ ActivityLog : creates
-  User ||--o{ Message : sends
-  User ||--o{ TeamMember : joins
-  User ||--o{ Project : leads
-  User ||--o| Performance : has
-
-  Department ||--o{ User : contains
-  Department ||--o{ Channel : contains
-
-  Task ||--o{ Subtask : contains
-  Task ||--o{ Attachment : has
-  Task }o--|| Project : belongs_to
-
-  Project ||--o{ TeamMember : has
-  Project ||--o{ Milestone : has
-
-  Channel ||--o{ Announcement : contains
-  Channel ||--o{ ChatRoom : contains
-
-  ChatRoom ||--o{ Message : contains
-  Message ||--o{ ReadReceipt : has
-```
-
-## Updated SQL schema
-
-```sql
-CREATE TABLE departments (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  description TEXT,
-  head TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE users (
-  id TEXT PRIMARY KEY,
-  email TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
-  firstName TEXT NOT NULL,
-  lastName TEXT NOT NULL,
-  phone TEXT,
-  role TEXT NOT NULL DEFAULT 'EMPLOYEE',
-  departmentId TEXT REFERENCES departments(id),
-  profileImage TEXT,
-  isActive BOOLEAN NOT NULL DEFAULT true,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE attendance (
-  id TEXT PRIMARY KEY,
-  userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  checkInTime TIMESTAMP,
-  checkOutTime TIMESTAMP,
-  date TIMESTAMP NOT NULL,
-  status TEXT NOT NULL DEFAULT 'ABSENT',
-  workingHours DOUBLE PRECISION,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(userId, date)
-);
-
-CREATE TABLE leaves (
-  id TEXT PRIMARY KEY,
-  userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  leaveType TEXT NOT NULL,
-  startDate TIMESTAMP NOT NULL,
-  endDate TIMESTAMP NOT NULL,
-  reason TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'PENDING',
-  approvedBy TEXT,
-  approvalDate TIMESTAMP,
-  rejectReason TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE tasks (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT,
-  assigneeId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  createdBy TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'PENDING',
-  priority TEXT NOT NULL DEFAULT 'MEDIUM',
-  dueDate TIMESTAMP,
-  completedAt TIMESTAMP,
-  projectId TEXT,
-  estimatedHours DOUBLE PRECISION,
-  actualHours DOUBLE PRECISION,
-  qualityRating INTEGER,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE subtasks (
-  id TEXT PRIMARY KEY,
-  taskId TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  assigneeId TEXT REFERENCES users(id),
-  status TEXT NOT NULL DEFAULT 'PENDING',
-  dueDate TIMESTAMP,
-  completedAt TIMESTAMP,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE attachments (
-  id TEXT PRIMARY KEY,
-  taskId TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  fileName TEXT NOT NULL,
-  fileUrl TEXT NOT NULL,
-  fileSize INTEGER,
-  fileType TEXT,
-  uploadedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE projects (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  status TEXT NOT NULL DEFAULT 'PLANNING',
-  startDate TIMESTAMP NOT NULL,
-  endDate TIMESTAMP,
-  budget DOUBLE PRECISION,
-  leadId TEXT NOT NULL REFERENCES users(id),
-  progress DOUBLE PRECISION DEFAULT 0,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE team_members (
-  id TEXT PRIMARY KEY,
-  projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  memberId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role TEXT,
-  joinedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(projectId, memberId)
-);
-
-CREATE TABLE milestones (
-  id TEXT PRIMARY KEY,
-  projectId TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  dueDate TIMESTAMP NOT NULL,
-  status TEXT NOT NULL DEFAULT 'NOT_STARTED',
-  completedAt TIMESTAMP,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE performances (
-  id TEXT PRIMARY KEY,
-  userId TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-  attendanceScore DOUBLE PRECISION NOT NULL DEFAULT 0,
-  taskScore DOUBLE PRECISION NOT NULL DEFAULT 0,
-  deadlineScore DOUBLE PRECISION NOT NULL DEFAULT 0,
-  qualityScore DOUBLE PRECISION NOT NULL DEFAULT 0,
-  totalScore DOUBLE PRECISION NOT NULL DEFAULT 0,
-  month INTEGER NOT NULL,
-  year INTEGER NOT NULL,
-  lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(userId, month, year)
-);
-
-CREATE TABLE channels (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  departmentId TEXT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
-  isPrivate BOOLEAN NOT NULL DEFAULT false,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(name, departmentId)
-);
-
-CREATE TABLE chat_rooms (
-  id TEXT PRIMARY KEY,
-  name TEXT,
-  type TEXT NOT NULL DEFAULT 'DIRECT',
-  createdById TEXT NOT NULL REFERENCES users(id),
-  members TEXT[],
-  channelId TEXT REFERENCES channels(id),
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE messages (
-  id TEXT PRIMARY KEY,
-  chatRoomId TEXT NOT NULL REFERENCES chat_rooms(id) ON DELETE CASCADE,
-  senderId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  content TEXT NOT NULL,
-  attachmentUrl TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE announcements (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  channelId TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-  priority TEXT,
-  expiresAt TIMESTAMP,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE read_receipts (
-  id TEXT PRIMARY KEY,
-  messageId TEXT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-  userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  readAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(messageId, userId)
-);
-
-CREATE TABLE activity_logs (
-  id TEXT PRIMARY KEY,
-  userId TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  action TEXT NOT NULL,
-  resource TEXT,
-  description TEXT,
-  ipAddress TEXT,
-  userAgent TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-## Why this schema was changed
-
-The main changes were made to keep the schema aligned with the way the project actually works today:
-
-- The leave table was kept because the backend has leave routes and controller logic, but it is documented as a backend-only feature rather than a main UI workflow.
-- Subtasks and attachments were kept because the backend task routes support them even though the visible task form does not expose them.
-- Chat rooms and read receipts were kept because the backend implements them, even though the UI primarily uses channels and announcements.
-- The attendance notes field was removed because it is not used anywhere in the current code.
-- The performance rank field was removed because it is not referenced by the current backend or frontend logic.
-- Department management remains a lookup and association feature rather than a full CRUD module, which matches the current implementation.
-
-## Summary
-
-The corrected schema reflects the current application more accurately than the earlier document. It keeps the core entities that are actively used by the authentication flow, attendance flow, task flow, project flow, performance flow, and communication flow, while leaving out fields and concepts that are not part of the current implementation.
+- `id` (`String`, PK, `@default(cuid())`)
+- `userId` (`String`, FK)
+- `leaveType` (`LeaveType`)
+- `startDate` (`DateTime`)
+- `endDate` (`DateTime`)
+- `reason` (`String`)
+- `status` (`LeaveStatus`, default `PENDING`)
+- `approvedBy` (`String?`)
+- `approvalDate` (`DateTime?`)
+- `rejectReason` (`String?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Relationships:
+
+- One `Leave` request belongs to one `User`.
+
+### 3.5 `tasks`
+
+Purpose: store assignable work items for users.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `title` (`String`)
+- `description` (`String?`)
+- `assigneeId` (`String`, FK)
+- `createdBy` (`String`)
+- `status` (`TaskStatus`, default `PENDING`)
+- `priority` (`TaskPriority`, default `MEDIUM`)
+- `dueDate` (`DateTime?`)
+- `completedAt` (`DateTime?`)
+- `projectId` (`String?`)
+- `estimatedHours` (`Float?`)
+- `actualHours` (`Float?`)
+- `qualityRating` (`Int?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `assigneeId`
+- `status`
+
+Relationships:
+
+- One `Task` belongs to one `User` as `assignee`.
+- One `Task` may have many `Attachment` records.
+- One `Task` may have many `Subtask` records.
+
+### 3.6 `subtasks`
+
+Purpose: store task breakdown items linked to parent tasks.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `taskId` (`String`, FK)
+- `title` (`String`)
+- `assigneeId` (`String?`, FK)
+- `status` (`TaskStatus`, default `PENDING`)
+- `dueDate` (`DateTime?`)
+- `completedAt` (`DateTime?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `taskId`
+
+Relationships:
+
+- One `Subtask` belongs to one parent `Task`.
+- One `Subtask` may optionally belong to one `User`.
+
+### 3.7 `attachments`
+
+Purpose: store file metadata for task attachments.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `taskId` (`String`, FK)
+- `fileName` (`String`)
+- `fileUrl` (`String`)
+- `fileSize` (`Int?`)
+- `fileType` (`String?`)
+- `uploadedAt` (`DateTime`, default `now()`)
+
+Indexes:
+
+- `taskId`
+
+Relationships:
+
+- One `Attachment` belongs to one `Task`.
+
+### 3.8 `projects`
+
+Purpose: store project metadata, ownership, and progress.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `name` (`String`)
+- `description` (`String?`)
+- `status` (`ProjectStatus`, default `PLANNING`)
+- `startDate` (`DateTime`)
+- `endDate` (`DateTime?`)
+- `budget` (`Float?`)
+- `leadId` (`String`, FK)
+- `progress` (`Float?`, default `0`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `leadId`
+
+Relationships:
+
+- One `Project` belongs to one `User` as `lead`.
+- One `Project` may have many `TeamMember` records.
+- One `Project` may have many `Milestone` records.
+
+### 3.9 `team_members`
+
+Purpose: associate users with projects and define member roles.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `projectId` (`String`, FK)
+- `memberId` (`String`, FK)
+- `role` (`String?`)
+- `joinedAt` (`DateTime`, default `now()`)
+
+Constraints:
+
+- Unique composite key on `(projectId, memberId)`.
+
+Relationships:
+
+- One `TeamMember` belongs to one `Project`.
+- One `TeamMember` belongs to one `User`.
+
+### 3.10 `milestones`
+
+Purpose: store project milestone details and status.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `projectId` (`String`, FK)
+- `name` (`String`)
+- `description` (`String?`)
+- `dueDate` (`DateTime`)
+- `status` (`MilestoneStatus`, default `NOT_STARTED`)
+- `completedAt` (`DateTime?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `projectId`
+
+Relationships:
+
+- One `Milestone` belongs to one `Project`.
+
+### 3.11 `performances`
+
+Purpose: store monthly performance metrics per user.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `userId` (`String`, FK, unique with `month` and `year`)
+- `attendanceScore` (`Float`, default `0`)
+- `taskScore` (`Float`, default `0`)
+- `deadlineScore` (`Float`, default `0`)
+- `qualityScore` (`Float`, default `0`)
+- `totalScore` (`Float`, default `0`)
+- `rank` (`Int?`)
+- `lastUpdated` (`DateTime`, updated automatically)
+- `month` (`Int`)
+- `year` (`Int`)
+- `createdAt` (`DateTime`, default `now()`)
+
+Constraints:
+
+- Unique composite index on `(userId, month, year)`.
+
+Relationships:
+
+- One `Performance` belongs to one `User`.
+
+### 3.12 `chat_rooms`
+
+Purpose: store chat room and direct/group conversation metadata.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `name` (`String?`)
+- `type` (`ChatType`, default `DIRECT`)
+- `createdById` (`String`, FK)
+- `members` (`String[]`)
+- `channelId` (`String?`, FK)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `createdById`
+
+Relationships:
+
+- One `ChatRoom` belongs to one `User` as `createdBy`.
+- One `ChatRoom` may optionally belong to one `Channel`.
+- One `ChatRoom` may have many `Message` records.
+
+### 3.13 `channels`
+
+Purpose: store communication channels for department-based announcements.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `name` (`String`)
+- `description` (`String?`)
+- `departmentId` (`String`, FK)
+- `isPrivate` (`Boolean`, default `false`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Constraints:
+
+- Unique composite index on `(name, departmentId)`.
+
+Relationships:
+
+- One `Channel` belongs to one `Department`.
+- One `Channel` may have many `ChatRoom` records.
+- One `Channel` may have many `Announcement` records.
+
+### 3.14 `messages`
+
+Purpose: store chat messages and optional attachments.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `chatRoomId` (`String`, FK)
+- `senderId` (`String`, FK)
+- `content` (`String`)
+- `attachmentUrl` (`String?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `chatRoomId`
+- `senderId`
+
+Relationships:
+
+- One `Message` belongs to one `ChatRoom`.
+- One `Message` belongs to one `User` as `sender`.
+- One `Message` may have many `ReadReceipt` records.
+
+### 3.15 `read_receipts`
+
+Purpose: record which users have read each message.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `messageId` (`String`, FK)
+- `userId` (`String`, FK)
+- `readAt` (`DateTime`, default `now()`)
+
+Constraints:
+
+- Unique composite index on `(messageId, userId)`.
+
+Relationships:
+
+- One `ReadReceipt` belongs to one `Message`.
+- One `ReadReceipt` belongs to one `User`.
+
+### 3.16 `announcements`
+
+Purpose: store channel announcement content for communication pages.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `title` (`String`)
+- `content` (`String`)
+- `channelId` (`String`, FK)
+- `priority` (`String?`)
+- `expiresAt` (`DateTime?`)
+- `createdAt` (`DateTime`, default `now()`)
+- `updatedAt` (`DateTime`, updated automatically)
+
+Indexes:
+
+- `channelId`
+
+Relationships:
+
+- One `Announcement` belongs to one `Channel`.
+
+### 3.17 `activity_logs`
+
+Purpose: store user activity audit events.
+
+Columns:
+
+- `id` (`String`, PK, `@default(cuid())`)
+- `userId` (`String`, FK)
+- `action` (`String`)
+- `resource` (`String?`)
+- `description` (`String?`)
+- `ipAddress` (`String?`)
+- `userAgent` (`String?`)
+- `createdAt` (`DateTime`, default `now()`)
+
+Indexes:
+
+- `userId`
+- `createdAt`
+
+Relationships:
+
+- One `ActivityLog` belongs to one `User`.
+
+## 4. Authentication and authorization
+
+### 4.1 Auth flow
+
+Authentication is implemented with JWT and uses the `users` table.
+
+- `POST /api/auth/register`: creates `User` and initial `Performance` record.
+- `POST /api/auth/login`: verifies email/password and returns JWT.
+- `POST /api/auth/logout`: returns success without database changes.
+- `POST /api/auth/refresh`: reissues tokens if a refresh token is provided.
+
+The `protect` middleware verifies JWT and loads `req.user` from `users` by email.
+
+### 4.2 Role-based permissions
+
+The `authorize` middleware restricts routes by `UserRole`.
+
+Implemented authorizations:
+
+- `TEAM_LEAD`, `SUPER_ADMIN` can create projects.
+- `HR`, `SUPER_ADMIN` can update leave status.
+- `SUPER_ADMIN` can assign user roles, deactivate users, and recalculate performance metrics.
+
+## 5. Feature-to-database mapping
+
+### 5.1 Dashboard
+
+Frontend: `/dashboard` page.
+Backend: `/api/dashboard`, `/api/dashboard/statistics`, `/api/dashboard/leaderboard`.
+
+Data sources:
+
+- `tasks` for task counts and statuses.
+- `attendance` for monthly attendance and presence.
+- `performances` for score data.
+- `projects` for project counts and memberships.
+- `activity_logs` for recent actions.
+- `announcements` for communication summaries.
+
+### 5.2 Login and registration
+
+Frontend: `/login`, `/register` pages.
+Backend: `/api/auth/register`, `/api/auth/login`.
+
+Connected data:
+
+- `users` for account credentials and profile data.
+- `performances` created automatically for new users.
+
+### 5.3 Attendance & leaves
+
+Frontend: `/attendance`, `/leaves` pages.
+Backend: `/api/attendance/checkin`, `/api/attendance/checkout`, `/api/attendance/history`, `/api/attendance/leaves`, `/api/attendance/leaves/:id`.
+
+Connected data:
+
+- `attendance` for check-in/check-out records.
+- `leaves` for leave request lifecycle.
+
+### 5.4 Task management
+
+Frontend: `/tasks` page.
+Backend: `/api/tasks`, `/api/tasks/:id`, `/api/tasks/:id/status`, `/api/tasks/:taskId/subtask`, `/api/tasks/subtask/:subtaskId`.
+
+Connected data:
+
+- `tasks` for work item assignment and status.
+- `subtasks` for child task tracking.
+- `attachments` for task file metadata.
+
+### 5.5 Project management
+
+Frontend: `/projects` page.
+Backend: `/api/projects`, `/api/projects/:id`, `/api/projects/:id/progress`, `/api/projects/:projectId/milestones`, `/api/projects/milestone/:id`.
+
+Connected data:
+
+- `projects` for project records.
+- `team_members` for project membership.
+- `milestones` for milestone tracking.
+
+### 5.6 Communication
+
+Frontend: `/chat` page.
+Backend: `/api/chat/rooms`, `/api/chat/rooms/:roomId/messages`, `/api/chat/channels`, `/api/chat/channels/:channelId/announcements`.
+
+Connected data:
+
+- `channels` for channel definitions.
+- `chat_rooms` for room metadata and membership.
+- `messages` for posted messages.
+- `announcements` for channel announcements.
+- `read_receipts` for message read tracking.
+
+### 5.7 Performance reporting
+
+Frontend: performance routes and dashboard metrics.
+Backend: `/api/performance/metrics`, `/api/performance/leaderboard`, `/api/performance/rank/:userId`, `/api/performance/recalculate`.
+
+Connected data:
+
+- `performances` for monthly score records.
+- `tasks` and `attendance` are used to calculate metrics.
+
+### 5.8 User administration
+
+Frontend: `admin` page exists but is mostly placeholder UI.
+Backend: `/api/users`, `/api/users/:id`, `/api/users/:id/role`, `/api/users/:id/deactivate`, `/api/users/:userId/activity-logs`.
+
+Connected data:
+
+- `users` for profile and role data.
+- `departments` as lookup data.
+- `activity_logs` for event history.
+
+### 5.9 Reports
+
+Backend: `/api/reports` exists, but it is a stub returning static JSON.
+Frontend: no connected reports UI.
+
+## 6. Database operations and flows
+
+### 6.1 Authentication flow
+
+1. User submits login or registration.
+2. Backend validates input with Joi schemas.
+3. On registration, `users` is created and a `performances` record is seeded.
+4. On login, password is compared and `activity_logs` records the login.
+5. JWT is returned and used by frontend Axios interceptors.
+
+### 6.2 Attendance flow
+
+1. Frontend calls `/api/attendance/checkin` or `/api/attendance/checkout`.
+2. Backend uses `attendance.upsert` for daily records.
+3. Check-out computes `workingHours` and updates `attendance`.
+4. History requests query `attendance` records by date range.
+
+### 6.3 Leave request flow
+
+1. Frontend submits leave data to `/api/attendance/leaves`.
+2. Backend writes `leaves` with `status = PENDING`.
+3. HR or admin updates status via `/api/attendance/leaves/:id`.
+4. Frontend filters leave records by status.
+
+### 6.4 Task lifecycle
+
+1. Frontend creates tasks via `/api/tasks`.
+2. Backend saves task metadata to `tasks`.
+3. Subtasks are created under `/api/tasks/:taskId/subtask`.
+4. Status updates change `tasks.status` or `subtasks.status`.
+5. Task details include subtasks and attachments.
+
+### 6.5 Project lifecycle
+
+1. Projects are created via `/api/projects`.
+2. `projects` stores the lead and optional budget.
+3. Team members are persisted in `team_members`.
+4. Milestones are created and updated in `milestones`.
+5. Progress updates are stored on `projects.progress`.
+
+### 6.6 Performance calculation
+
+1. Performance metrics are calculated from `attendance` and `tasks`.
+2. `/api/performance/metrics` computes scores on demand.
+3. `/api/performance/recalculate` refreshes current metrics in `performances`.
+4. `performances` stores monthly totals for leaderboard queries.
+
+## 7. Database constraints and indexes
+
+### Unique constraints
+
+- `users.email`
+- `departments.name`
+- `attendance` on `(userId, date)`
+- `team_members` on `(projectId, memberId)`
+- `performances` on `(userId, month, year)`
+- `channels` on `(name, departmentId)`
+- `read_receipts` on `(messageId, userId)`
+
+### Indexes
+
+- `tasks.assigneeId`
+- `tasks.status`
+- `subtasks.taskId`
+- `attachments.taskId`
+- `projects.leadId`
+- `milestones.projectId`
+- `performances.userId, month, year`
+- `chat_rooms.createdById`
+- `messages.chatRoomId`
+- `messages.senderId`
+- `activity_logs.userId`
+- `activity_logs.createdAt`
+
+## 8. File and document storage
+
+File storage is represented by URL metadata only. The current project does not implement a file upload pipeline, and no frontend file picker is present.
+
+## 9. Notable implementation details
+
+- The leave request endpoint accepts both `type` and `leaveType`.
+- Attendance check-in uses upsert to enforce one record per user/day.
+- Performance scores are derived from `attendance` and `tasks` and stored in `performances`.
+- `chat_rooms.members` is modeled as a string array of user IDs.
+- Admin UI is placeholder content; backend user management exists.
+- Reports route is a stub and has no connected frontend implementation.
+
+## 10. Unconnected or placeholder features
+
+- The `admin` page UI is not fully wired to backend management APIs.
+- The `reports` route is implemented only as a placeholder response.
+- File uploads are not implemented despite attachment metadata in the schema.
+- The `chat` page uses announcements and channels rather than a full direct messaging workflow.
+
+## 11. Summary
+
+This document reflects the current implementation in the repository. The visible frontend features and the backend Prisma schema are aligned around users, attendance, leaves, tasks, projects, performance, and communication.
+
+Only the admin dashboard and reports endpoint remain placeholder elements that are not yet fully wired to the database.

@@ -134,17 +134,18 @@ export const getAttendanceHistory = async (req, res) => {
 // Request Leave
 export const requestLeave = async (req, res) => {
   try {
-    const { type, startDate, endDate, reason } = req.body;
+    const { type, leaveType, startDate, endDate, reason } = req.body;
     const userId = req.user.id;
+    const selectedType = type || leaveType;
 
-    if (!type || !startDate || !endDate || !reason) {
+    if (!selectedType || !startDate || !endDate || !reason) {
       throw new AppError('Missing required fields', 400);
     }
 
     const leave = await prisma.leave.create({
       data: {
         userId,
-        leaveType: type,
+        leaveType: selectedType,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         reason,

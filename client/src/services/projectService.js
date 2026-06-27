@@ -26,7 +26,7 @@ export const updateProject = async (projectId, updateData) => {
 
 // Create milestone
 export const createMilestone = async (projectId, milestoneData) => {
-  const response = await api.post(`/projects/${projectId}/milestones`, milestoneData);
+  const response = await api.post(`/projects/${projectId}/milestone`, milestoneData);
   return response.data;
 };
 

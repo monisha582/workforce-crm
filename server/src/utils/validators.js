@@ -103,6 +103,12 @@ export const checkInOutSchema = Joi.object({
     }),
 });
 
+const leaveTypeSchema = Joi.string()
+  .valid('SICK_LEAVE', 'CASUAL_LEAVE', 'EARNED_LEAVE', 'MATERNITY_LEAVE', 'SPECIAL_LEAVE')
+  .messages({
+    'any.only': 'Leave type must be SICK_LEAVE, CASUAL_LEAVE, EARNED_LEAVE, MATERNITY_LEAVE, or SPECIAL_LEAVE',
+  });
+
 export const leaveRequestSchema = Joi.object({
   startDate: Joi.date()
     .iso()
@@ -120,13 +126,8 @@ export const leaveRequestSchema = Joi.object({
       'date.min': 'End date must be after start date',
       'any.required': 'End date is required',
     }),
-  type: Joi.string()
-    .valid('SICK_LEAVE', 'CASUAL_LEAVE', 'EARNED_LEAVE', 'MATERNITY_LEAVE', 'SPECIAL_LEAVE')
-    .required()
-    .messages({
-      'any.only': 'Leave type must be SICK_LEAVE, CASUAL_LEAVE, EARNED_LEAVE, MATERNITY_LEAVE, or SPECIAL_LEAVE',
-      'any.required': 'Leave type is required',
-    }),
+  type: leaveTypeSchema.optional(),
+  leaveType: leaveTypeSchema.optional(),
   reason: Joi.string()
     .min(10)
     .max(500)
@@ -136,7 +137,11 @@ export const leaveRequestSchema = Joi.object({
       'string.max': 'Reason cannot exceed 500 characters',
       'any.required': 'Reason is required',
     }),
-});
+})
+  .or('type', 'leaveType')
+  .messages({
+    'object.missing': 'Leave type is required',
+  });
 
 export const announcementSchema = Joi.object({
   title: Joi.string()
