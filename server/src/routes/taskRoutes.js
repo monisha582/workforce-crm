@@ -6,6 +6,8 @@ import {
   getTasks,
   updateTaskStatus,
   createSubtask,
+  updateSubtaskStatus,
+  deleteSubtask,
   getTaskDetails,
   deleteTask,
 } from '../controllers/taskController.js';
@@ -18,5 +20,7 @@ router.get('/:id', protect, getTaskDetails);
 router.patch('/:id/status', protect, updateTaskStatus);
 router.delete('/:id', protect, deleteTask);
 router.post('/:taskId/subtask', protect, createSubtask);
+router.patch('/subtask/:subtaskId', protect, updateSubtaskStatus);
+router.delete('/subtask/:subtaskId', protect, deleteSubtask);
 
 export default router;

@@ -2,7 +2,7 @@ import api from './api';
 
 // Request a leave
 export const requestLeave = async (leaveData) => {
-  const response = await api.post('/attendance/request-leave', leaveData);
+  const response = await api.post('/attendance/leaves', leaveData);
   return response.data;
 };
 
@@ -24,7 +24,7 @@ export const getAllLeaves = async (userId, status) => {
 
 // Approve leave (HR/Admin only)
 export const approveLeave = async (leaveId, approvalData) => {
-  const response = await api.put(`/attendance/leaves/${leaveId}`, {
+  const response = await api.patch(`/attendance/leaves/${leaveId}`, {
     status: 'APPROVED',
     ...approvalData,
   });
@@ -33,7 +33,7 @@ export const approveLeave = async (leaveId, approvalData) => {
 
 // Reject leave (HR/Admin only)
 export const rejectLeave = async (leaveId, rejectReason) => {
-  const response = await api.put(`/attendance/leaves/${leaveId}`, {
+  const response = await api.patch(`/attendance/leaves/${leaveId}`, {
     status: 'REJECTED',
     rejectReason,
   });

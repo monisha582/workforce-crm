@@ -183,3 +183,21 @@ export const updateMilestoneStatus = async (req, res) => {
     throw error;
   }
 };
+
+// Delete Milestone
+export const deleteMilestone = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.milestone.delete({
+      where: { id },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Milestone deleted',
+    });
+  } catch (error) {
+    throw error;
+  }
+};

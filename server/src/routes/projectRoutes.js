@@ -7,6 +7,7 @@ import {
   updateProjectProgress,
   createMilestone,
   updateMilestoneStatus,
+  deleteMilestone,
 } from '../controllers/projectController.js';
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.get('/', protect, getProjects);
 router.get('/:id', protect, getProjectDetails);
 router.patch('/:id/progress', protect, updateProjectProgress);
 router.post('/:projectId/milestone', protect, createMilestone);
-router.patch('/milestone/:id/status', protect, updateMilestoneStatus);
+router.patch('/milestone/:id', protect, updateMilestoneStatus);
+router.delete('/milestone/:id', protect, deleteMilestone);
 
 export default router;

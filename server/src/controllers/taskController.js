@@ -168,3 +168,50 @@ export const deleteTask = async (req, res) => {
     throw error;
   }
 };
+
+// Update Subtask Status
+export const updateSubtaskStatus = async (req, res) => {
+  try {
+    const { subtaskId } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = ['PENDING', 'IN_PROGRESS', 'UNDER_REVIEW', 'COMPLETED'];
+    if (!validStatuses.includes(status)) {
+      throw new AppError('Invalid status', 400);
+    }
+
+    const subtask = await prisma.subtask.update({
+      where: { id: subtaskId },
+      data: {
+        status,
+        completedAt: status === 'COMPLETED' ? new Date() : null,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Subtask updated',
+      data: subtask,
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Delete Subtask
+export const deleteSubtask = async (req, res) => {
+  try {
+    const { subtaskId } = req.params;
+
+    await prisma.subtask.delete({
+      where: { id: subtaskId },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Subtask deleted',
+    });
+  } catch (error) {
+    throw error;
+  }
+};

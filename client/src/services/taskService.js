@@ -20,7 +20,7 @@ export const getTaskDetails = async (taskId) => {
 
 // Update task status
 export const updateTaskStatus = async (taskId, status, qualityRating) => {
-  const response = await api.put(`/tasks/${taskId}`, {
+  const response = await api.patch(`/tasks/${taskId}/status`, {
     status,
     qualityRating,
   });
@@ -35,7 +35,7 @@ export const deleteTask = async (taskId) => {
 
 // Create subtask
 export const createSubtask = async (taskId, subtaskData) => {
-  const response = await api.post(`/tasks/${taskId}/subtasks`, subtaskData);
+  const response = await api.post(`/tasks/${taskId}/subtask`, subtaskData);
   return response.data;
 };
 
@@ -44,12 +44,12 @@ export const createSubtask = async (taskId, subtaskData) => {
 
 // Update subtask status
 export const updateSubtaskStatus = async (subtaskId, status) => {
-  const response = await api.put(`/subtasks/${subtaskId}`, { status });
+  const response = await api.patch(`/tasks/subtask/${subtaskId}`, { status });
   return response.data;
 };
 
 // Delete subtask
 export const deleteSubtask = async (subtaskId) => {
-  const response = await api.delete(`/subtasks/${subtaskId}`);
+  const response = await api.delete(`/tasks/subtask/${subtaskId}`);
   return response.data;
 };

@@ -32,12 +32,12 @@ export const createMilestone = async (projectId, milestoneData) => {
 
 // Update milestone status
 export const updateMilestoneStatus = async (milestoneId, status) => {
-  const response = await api.put(`/milestones/${milestoneId}`, { status });
+  const response = await api.patch(`/projects/milestone/${milestoneId}`, { status });
   return response.data;
 };
 
 // Delete milestone
 export const deleteMilestone = async (milestoneId) => {
-  const response = await api.delete(`/milestones/${milestoneId}`);
+  const response = await api.delete(`/projects/milestone/${milestoneId}`);
   return response.data;
 };
