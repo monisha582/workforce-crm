@@ -74,7 +74,11 @@ export default function ProjectsPage() {
     setSubmitting(true);
 
     try {
-      await projectService.createProject(form);
+      const projectData = {
+        ...form,
+        budget: form.budget ? parseFloat(form.budget) : null,
+      };
+      await projectService.createProject(projectData);
       toast.success('Project created successfully');
       setForm({
         name: '',

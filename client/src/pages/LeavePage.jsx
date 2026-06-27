@@ -13,7 +13,7 @@ export default function LeavePage() {
   const { user } = useAuthStore();
 
   const [formData, setFormData] = useState({
-    leaveType: 'CASUAL',
+    type: 'CASUAL',
     startDate: '',
     endDate: '',
     reason: '',
@@ -38,8 +38,13 @@ export default function LeavePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.leaveType || !formData.startDate || !formData.endDate || !formData.reason) {
+    if (!formData.type || !formData.startDate || !formData.endDate || !formData.reason) {
       toast.error('Please fill all fields');
+      return;
+    }
+
+    if (formData.reason.length < 10) {
+      toast.error('Reason must be at least 10 characters');
       return;
     }
 
@@ -50,13 +55,13 @@ export default function LeavePage() {
 
     try {
       await leaveService.requestLeave({
-        leaveType: formData.leaveType,
+        type: formData.type,
         startDate: formData.startDate,
         endDate: formData.endDate,
         reason: formData.reason,
       });
       toast.success('Leave request submitted');
-      setFormData({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '' });
+      setFormData({ type: 'CASUAL', startDate: '', endDate: '', reason: '' });
       setShowForm(false);
       loadLeaves();
     } catch (error) {
@@ -84,9 +89,9 @@ export default function LeavePage() {
         return 'bg-blue-100 text-blue-800';
       case 'SICK':
         return 'bg-red-100 text-red-800';
-      case 'VACATION':
+      case 'PERSONAL':
         return 'bg-purple-100 text-purple-800';
-      case 'MATERNITY':
+      case 'PAID':
         return 'bg-pink-100 text-pink-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -123,14 +128,14 @@ export default function LeavePage() {
                     Leave Type
                   </label>
                   <select
-                    value={formData.leaveType}
-                    onChange={(e) => setFormData({ ...formData, leaveType: e.target.value })}
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="CASUAL">Casual Leave</option>
                     <option value="SICK">Sick Leave</option>
-                    <option value="VACATION">Vacation</option>
-                    <option value="MATERNITY">Maternity Leave</option>
+                    <option value="PERSONAL">Personal Leave</option>
+                    <option value="PAID">Paid Leave</option>
                   </select>
                 </div>
 
