@@ -105,16 +105,18 @@ export const checkInOutSchema = Joi.object({
 
 export const leaveRequestSchema = Joi.object({
   startDate: Joi.date()
-    .min('now')
+    .iso()
     .required()
     .messages({
-      'date.min': 'Start date must be in the future',
+      'date.base': 'Start date must be a valid date',
       'any.required': 'Start date is required',
     }),
   endDate: Joi.date()
+    .iso()
     .min(Joi.ref('startDate'))
     .required()
     .messages({
+      'date.base': 'End date must be a valid date',
       'date.min': 'End date must be after start date',
       'any.required': 'End date is required',
     }),
