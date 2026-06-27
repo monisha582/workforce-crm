@@ -20,6 +20,7 @@ const menuItems = [
   { icon: MdTask, label: 'Tasks', path: '/tasks' },
   { icon: MdAssignment, label: 'Projects', path: '/projects', roles: ['TEAM_LEAD', 'SUPER_ADMIN'] },
   { icon: MdDateRange, label: 'Attendance', path: '/attendance' },
+  { icon: MdDateRange, label: 'Leaves', path: '/leaves' },
   { icon: MdShowChart, label: 'Performance', path: '/performance' },
   { icon: MdPeople, label: 'Teams', path: '/teams', roles: ['HR', 'TEAM_LEAD', 'SUPER_ADMIN'] },
   { icon: MdChat, label: 'Chat', path: '/chat' },

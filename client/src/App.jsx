@@ -12,6 +12,7 @@ import PerformancePage from './pages/performance/PerformancePage';
 import TeamsPage from './pages/teams/TeamsPage';
 import ChatPage from './pages/chat/ChatPage';
 import AdminPage from './pages/admin/AdminPage';
+import LeavePage from './pages/LeavePage';
 import Layout from './components/layout/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -77,6 +78,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AttendancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/leaves"
+          element={
+            <ProtectedRoute>
+              <LeavePage />
             </ProtectedRoute>
           }
         />
