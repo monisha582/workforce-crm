@@ -13,7 +13,7 @@ export default function LeavePage() {
   const { user } = useAuthStore();
 
   const [formData, setFormData] = useState({
-    type: 'CASUAL',
+    type: 'CASUAL_LEAVE',
     startDate: '',
     endDate: '',
     reason: '',
@@ -61,7 +61,7 @@ export default function LeavePage() {
         reason: formData.reason,
       });
       toast.success('Leave request submitted');
-      setFormData({ type: 'CASUAL', startDate: '', endDate: '', reason: '' });
+      setFormData({ type: 'CASUAL_LEAVE', startDate: '', endDate: '', reason: '' });
       setShowForm(false);
       loadLeaves();
     } catch (error) {
@@ -85,14 +85,16 @@ export default function LeavePage() {
 
   const getLeaveTypeColor = (type) => {
     switch (type) {
-      case 'CASUAL':
+      case 'CASUAL_LEAVE':
         return 'bg-blue-100 text-blue-800';
-      case 'SICK':
+      case 'SICK_LEAVE':
         return 'bg-red-100 text-red-800';
-      case 'PERSONAL':
-        return 'bg-purple-100 text-purple-800';
-      case 'PAID':
+      case 'EARNED_LEAVE':
+        return 'bg-green-100 text-green-800';
+      case 'MATERNITY_LEAVE':
         return 'bg-pink-100 text-pink-800';
+      case 'SPECIAL_LEAVE':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -132,10 +134,11 @@ export default function LeavePage() {
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="CASUAL">Casual Leave</option>
-                    <option value="SICK">Sick Leave</option>
-                    <option value="PERSONAL">Personal Leave</option>
-                    <option value="PAID">Paid Leave</option>
+                    <option value="CASUAL_LEAVE">Casual Leave</option>
+                    <option value="SICK_LEAVE">Sick Leave</option>
+                    <option value="EARNED_LEAVE">Earned Leave</option>
+                    <option value="MATERNITY_LEAVE">Maternity Leave</option>
+                    <option value="SPECIAL_LEAVE">Special Leave</option>
                   </select>
                 </div>
 
