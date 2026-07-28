@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const defaultApiUrl = 'https://satisfied-freedom-production-aace.up.railway.app';
+const defaultApiUrl = 'https://workforce-crm-backend.onrender.com';
 const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
 
 const api = axios.create({
